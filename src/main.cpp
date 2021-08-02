@@ -4,10 +4,13 @@
 #include <SerialTransfer.h>
 #include <SoftwareSerial.h>
 
+/* THE ARDUINO UNO SLAVE */
+
 SerialTransfer slaveMCU;
 SoftwareSerial Extra(2, 3); // Rx: 2, Tx: 3
 unsigned long tic = millis();
 unsigned long toc = tic;
+#define DELTA 1000
 
 struct PAYMASTER {
   /*
@@ -19,6 +22,15 @@ struct PAYMASTER {
   uint8_t fan; 
   uint8_t led;
 } instructions;
+
+struct PAYSLAVE {
+  /*
+  fan: the fan speed read off the pin no. 3 (yellow wire) of a PC fan.
+  */
+  uint8_t fan;
+} status = {
+  234
+};
 
 void setup() {
   // put your setup code here, to run once:
@@ -55,5 +67,12 @@ void loop() {
       Serial.println(F("PAYLOAD_ERROR"));
     else if(slaveMCU.status == -3)
       Serial.println(F("STOP_BYTE_ERROR"));
+  }
+
+  toc = millis();
+  if ((toc - tic) > DELTA) {
+    tic = toc;
+    slaveMCU.txObj(status, sizeof(status));
+    slaveMCU.sendDatum(status);
   }
 }
