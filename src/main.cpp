@@ -42,8 +42,8 @@ void setup() {
   delay(201);
 }
 
-void debug() {
-  Serial.print("SLAVE: ");
+void debugRx() {
+  Serial.print("SLAVE RX: ");
   Serial.print(millis());
   Serial.print("   Water: ");
   Serial.print((bool)instructions.water);
@@ -53,11 +53,18 @@ void debug() {
   Serial.println(instructions.led);
 }
 
+void debugTx() {
+  Serial.print("SLAVE TX: ");
+  Serial.print(millis());
+  Serial.print("   Fan: ");
+  Serial.println(status.fan);
+}
+
 void loop() {
   // put your main code here, to run repeatedly:
   if (slaveMCU.available()) {
     slaveMCU.rxObj(instructions);
-    debug();
+    debugRx();
   } else if (slaveMCU.status < 0) {
     Serial.print("ERROR: ");
 
@@ -74,5 +81,6 @@ void loop() {
     tic = toc;
     slaveMCU.txObj(status, sizeof(status));
     slaveMCU.sendDatum(status);
+    debugTx();
   }
 }
