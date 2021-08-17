@@ -4,10 +4,17 @@
 #include <SerialTransfer.h>
 #include <SoftwareSerial.h>
 
+#define FAN_CONTROLLER  3
+#define SPEED_LO        0
+#define SPEED_MED       201
+#define SPEED_HI        255
+
+int count = 0;
+
 /* THE ARDUINO UNO SLAVE */
 
 SerialTransfer slaveMCU;
-SoftwareSerial Extra(2, 3); // Rx: 2, Tx: 3
+SoftwareSerial Extra(8, 9); // Rx: 8, Tx: 9; Need 2, 3 for interrupts
 unsigned long tic = millis();
 unsigned long toc = tic;
 #define DELTA 1000
@@ -27,10 +34,13 @@ struct PAYSLAVE {
   /*
   fan: the fan speed read off the pin no. 3 (yellow wire) of a PC fan.
   */
-  uint8_t fan;
-} status = {
-  234
-};
+  int fan;
+} status;
+
+void counter() {
+  count++;
+
+}
 
 void setup() {
   // put your setup code here, to run once:
@@ -40,6 +50,22 @@ void setup() {
   delay(201);
   slaveMCU.begin(Extra);
   delay(201);
+  /*
+  Set up the pin no. 3 for controlling fan speed.
+  The fan has a built in PWM controller, 
+  so it should be enough to send a PWN signal.
+  */
+  pinMode(FAN_CONTROLLER, OUTPUT);
+  analogWrite(FAN_CONTROLLER, 0);
+  /*
+  Set up pin no. 2 to receive interrupts
+  in order to calculate the fan speed.
+  */
+  attachInterrupt(digitalPinToInterrupt(2), counter, RISING);
+}
+
+void execute() {
+  analogWrite(FAN_CONTROLLER, instructions.fan);
 }
 
 void debugRx() {
@@ -65,6 +91,7 @@ void loop() {
   if (slaveMCU.available()) {
     slaveMCU.rxObj(instructions);
     debugRx();
+    execute();
   } else if (slaveMCU.status < 0) {
     Serial.print("ERROR: ");
 
@@ -78,9 +105,16 @@ void loop() {
 
   toc = millis();
   if ((toc - tic) > DELTA) {
+    /*
+    Compute the fan speed from accumulated pulses 
+    over DELTA ms and send result over UART. Reset 
+    the timer and counter.
+    */
     tic = toc;
+    status.fan = count * DELTA * 60 / (2 * 1000);
     slaveMCU.txObj(status, sizeof(status));
-    slaveMCU.sendDatum(status);
+    slaveMCU.sendDatum(status);  
     debugTx();
+    count = 0; 
   }
 }
