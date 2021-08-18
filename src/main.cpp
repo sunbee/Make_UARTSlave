@@ -34,7 +34,7 @@ struct PAYSLAVE {
   /*
   fan: the fan speed read off the pin no. 3 (yellow wire) of a PC fan.
   */
-  int fan;
+  uint16_t fan;
 } status;
 
 void counter() {
@@ -111,7 +111,7 @@ void loop() {
     the timer and counter.
     */
     tic = toc;
-    status.fan = count * DELTA * 60 / (2 * 1000);
+    status.fan = count *  60 / 2;
     slaveMCU.txObj(status, sizeof(status));
     slaveMCU.sendDatum(status);  
     debugTx();
